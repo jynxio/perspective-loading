@@ -1,108 +1,69 @@
 import '@/reset.css';
 import Stats from 'stats.js';
-import earcut from 'earcut';
 import * as three from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Line2 } from 'three/examples/jsm/lines/Line2';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry';
 
-/* Camera */
-const camera = new three.PerspectiveCamera(75, globalThis.innerWidth / globalThis.innerHeight, 0.01, 100);
-camera.position.set(0, 0, 10);
-
-/* Scene */
+/**
+ * Base
+ */
 const scene = new three.Scene();
+scene.background = new three.Color(0xe2e0e2);
 
-scene.add(camera);
-scene.background = new three.Color(0x444488);
+const perspectiveCamera = new three.PerspectiveCamera(75, globalThis.innerWidth / globalThis.innerHeight, 0.01, 1000);
 
-/* Renderer */
+perspectiveCamera.position.set(0, 0, 10);
+scene.add(perspectiveCamera);
+
+const aspectRatio = globalThis.innerHeight / globalThis.innerWidth;
+const orthographicCamera = new three.OrthographicCamera(-20 * aspectRatio, 20 * aspectRatio, 20, -20, 0.01, 1000);
+
+orthographicCamera.position.set(0, 0, 20);
+scene.add(orthographicCamera);
+
 const canvas = document.createElement('canvas');
+document.body.prepend(canvas);
+
 const renderer = new three.WebGLRenderer({ canvas, antialias: globalThis.devicePixelRatio < 2 });
 
-document.body.prepend(canvas);
-renderer.autoClear = false;
-renderer.autoClearColor = false;
-renderer.autoClearDepth = false;
-renderer.autoClearStencil = false;
 renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio, 2));
 renderer.setSize(globalThis.innerWidth, globalThis.innerHeight);
 
-/* Controls */
-const controls = new OrbitControls(camera, renderer.domElement);
+const controls = new OrbitControls(perspectiveCamera, renderer.domElement);
 controls.enableDamping = true;
 
-/* Stats */
 const stats = new Stats();
 
 stats.showPanel(0);
 document.body.prepend(stats.dom);
 
-/* Resize */
-globalThis.addEventListener('resize', _ => {
+globalThis.addEventListener('resize', () => {
     renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio, 2));
     renderer.setSize(globalThis.innerWidth, globalThis.innerHeight);
 
-    camera.aspect = globalThis.innerWidth / globalThis.innerHeight;
-    camera.updateProjectionMatrix();
+    perspectiveCamera.aspect = globalThis.innerWidth / globalThis.innerHeight;
+    perspectiveCamera.updateProjectionMatrix();
+
+    const aspectRatio = globalThis.innerHeight / globalThis.innerWidth;
+
+    orthographicCamera.left = -20 * aspectRatio;
+    orthographicCamera.right = 20 * aspectRatio;
 });
 
-/* Render */
 renderer.setAnimationLoop(function loop() {
     stats.begin();
 
-    renderer.clearColor();
-    renderer.clearStencil();
-
     controls.update();
-    scene.remove(fatLine).add(loading);
-    renderer.render(scene, camera);
-
-    renderer.clearDepth();
-
-    scene.remove(loading).add(fatLine);
-    renderer.render(scene, camera);
+    renderer.render(scene, perspectiveCamera);
 
     stats.end();
 });
 
-/* Sphere */
-// const colors = new Uint8Array([0, 128]);
-// const gradientMap = new three.DataTexture(colors, colors.length, 1, three.RedFormat);
-
-// gradientMap.needsUpdate = true;
-
-// const geometry = new three.SphereGeometry(1, 32, 16);
-// const material = new three.MeshToonMaterial({ color: 0x8fa6c3, gradientMap });
-// const mesh = new three.Mesh(geometry, material);
-
-// scene.add(mesh);
-
-/* Light */
-const ambientLight = new three.AmbientLight(0xc1c1c1, 3);
-const pointLight = new three.PointLight(0xffffff, 2, 800, 0);
-const pointLightHelper = new three.Mesh(
-    new three.SphereGeometry(0.1, 16, 16),
-    new three.MeshBasicMaterial({ color: 0xffffff }),
-);
-
-pointLightHelper.add(pointLight);
-scene.add(ambientLight, pointLightHelper);
-
-requestAnimationFrame(function loop() {
-    requestAnimationFrame(loop);
-
-    const timer = Date.now() * 0.00025;
-
-    pointLightHelper.position.x = Math.sin(timer * 7) * 3;
-    pointLightHelper.position.y = Math.cos(timer * 5) * 4;
-    pointLightHelper.position.z = Math.cos(timer * 3) * 3;
-});
-
 /*  */
-const segmentCount = 13;
-const directions = []; // 0 -> 0, 1 -> 90, -1 -> -90
+const segmentCount = 13; // loading的段数
+const directions = []; // 每一段的方向: 0 -> 0°, 1 -> 90°, -1 -> -90°
 
 for (let i = 0; i < segmentCount; i++) {
     const rad = ((i * Math.PI) / 2) % (Math.PI * 2);
@@ -112,26 +73,29 @@ for (let i = 0; i < segmentCount; i++) {
 }
 
 //
-const geometries = [];
-
-for (let i = 0; i < segmentCount; i++) {
-    geometries.push(new three.PlaneGeometry(1, 1)); // TODO: 使用InstanceGeometry
-}
+const geometries = new Array(segmentCount).fill(new three.PlaneGeometry(1, 1)); // TODO: 使用InstanceGeometry
 
 //
-const colors = new Uint8Array([0, 128]);
-const gradientMap = new three.DataTexture(colors, colors.length, 1, three.RedFormat);
+// TODO: 记笔记
+// const colors = new Uint8Array([0, 128]);
+// const gradientMap = new three.DataTexture(colors, colors.length, 1, three.RedFormat);
+// gradientMap.needsUpdate = true;
+// const material = new three.MeshToonMaterial({gradientMap})
 
-gradientMap.needsUpdate = true;
-
-const material = new three.MeshToonMaterial({ color: 0x8fa6c3, gradientMap, wireframe: false, side: three.DoubleSide });
+const materialBright = new three.MeshBasicMaterial({ color: 0x1873e1, side: three.DoubleSide });
+const materialDim = new three.MeshBasicMaterial({ color: 0x1956a9, side: three.DoubleSide });
 
 //
-const meshs = geometries.map(g => new three.Mesh(g, material));
+const meshs = geometries.map((geometry, index) => {
+    const material = index % 2 === 0 ? materialBright : materialDim;
+    const mesh = new three.Mesh(geometry, material);
+
+    return mesh;
+});
 
 meshs.forEach((mesh, index) => {
     //
-    mesh.scale.setY(0.4).setX(Math.random() * 3 + 1);
+    mesh.scale.setY(0.5).setX(Math.random() * 3 + 1);
     mesh.rotateY((directions[index] * Math.PI) / 2);
     mesh.updateMatrix();
 
@@ -146,7 +110,8 @@ meshs.forEach((mesh, index) => {
     mesh.updateMatrix();
 });
 
-const loading = new three.Group().add(...meshs);
+const plane = new three.Group().add(...meshs);
+scene.add(plane);
 
 //
 const points = [];
@@ -158,10 +123,7 @@ points.push(new three.Vector3(-0.5, -0.5, 0).applyMatrix4(meshs[0].matrix));
 points.push(points[0]);
 
 const linePositions = [];
-
-for (const point of points) {
-    linePositions.push(...point.toArray());
-}
+for (const point of points) linePositions.push(...point.toArray());
 
 const line = new three.Line(
     new three.BufferGeometry().setFromPoints(points),
@@ -171,7 +133,7 @@ const line = new three.Line(
 const fatLineGeometry = new LineGeometry().setPositions(linePositions);
 const fatLineMaterial = new LineMaterial({
     color: 0x000000,
-    linewidth: 0.05,
+    linewidth: 0.02,
     vertexColors: false,
     dashed: false,
     alphaToCoverage: false,
@@ -179,4 +141,12 @@ const fatLineMaterial = new LineMaterial({
 fatLineMaterial.worldUnits = true;
 fatLineMaterial.needsUpdate = true;
 
-const fatLine = new Line2(fatLineGeometry, fatLineMaterial);
+const outline = new Line2(fatLineGeometry, fatLineMaterial);
+
+//
+const loading = new three.Group().add(plane, outline);
+scene.add(loading);
+
+//
+const box3 = new three.Box3().setFromPoints(points);
+loading.position.sub(box3.getCenter(new three.Vector3()));
