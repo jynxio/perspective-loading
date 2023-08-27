@@ -3,7 +3,6 @@ import Stats from 'stats.js';
 import earcut from 'earcut';
 import * as three from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { OutlineEffect } from 'three/examples/jsm/effects/OutlineEffect';
 import { Line2 } from 'three/examples/jsm/lines/Line2';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry';
