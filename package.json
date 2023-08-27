@@ -29,7 +29,6 @@
         "vite": "^4.4.9"
     },
     "dependencies": {
-        "earcut": "^2.2.4",
         "lil-gui": "^0.18.2",
         "stats.js": "^0.17.0",
         "three": "^0.155.0"
