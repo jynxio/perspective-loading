@@ -6,22 +6,22 @@ import { Line2 } from 'three/examples/jsm/lines/Line2';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry';
 
+// TODO: 记笔记
+// const colors = new Uint8Array([0, 128]);
+// const gradientMap = new three.DataTexture(colors, colors.length, 1, three.RedFormat);
+// gradientMap.needsUpdate = true;
+// const material = new three.MeshToonMaterial({gradientMap})
+
 /**
  * Base
  */
 const scene = new three.Scene();
 scene.background = new three.Color(0xe2e0e2);
 
-const perspectiveCamera = new three.PerspectiveCamera(75, globalThis.innerWidth / globalThis.innerHeight, 0.01, 1000);
+const perspectiveCamera = new three.PerspectiveCamera(45, globalThis.innerWidth / globalThis.innerHeight, 0.01, 1000);
 
-perspectiveCamera.position.set(0, 0, 10);
+perspectiveCamera.position.set(0, 0, 25);
 scene.add(perspectiveCamera);
-
-const aspectRatio = globalThis.innerHeight / globalThis.innerWidth;
-const orthographicCamera = new three.OrthographicCamera(-20 * aspectRatio, 20 * aspectRatio, 20, -20, 0.01, 1000);
-
-orthographicCamera.position.set(0, 0, 20);
-scene.add(orthographicCamera);
 
 const canvas = document.createElement('canvas');
 document.body.prepend(canvas);
@@ -45,11 +45,6 @@ globalThis.addEventListener('resize', () => {
 
     perspectiveCamera.aspect = globalThis.innerWidth / globalThis.innerHeight;
     perspectiveCamera.updateProjectionMatrix();
-
-    const aspectRatio = globalThis.innerHeight / globalThis.innerWidth;
-
-    orthographicCamera.left = -20 * aspectRatio;
-    orthographicCamera.right = 20 * aspectRatio;
 });
 
 renderer.setAnimationLoop(function loop() {
@@ -62,91 +57,92 @@ renderer.setAnimationLoop(function loop() {
 });
 
 /*  */
+//
 const segmentCount = 13; // loading的段数
-const directions = []; // 每一段的方向: 0 -> 0°, 1 -> 90°, -1 -> -90°
+const segmentDirections = []; // 每一段的方向: 0 -> 0°, 1 -> 90°, -1 -> -90°
 
 for (let i = 0; i < segmentCount; i++) {
     const rad = ((i * Math.PI) / 2) % (Math.PI * 2);
     const sin = Math.sin(rad);
 
-    directions.push(Math.abs(sin) < Number.EPSILON ? 0 : sin);
+    segmentDirections.push(Math.abs(sin) < Number.EPSILON ? 0 : sin);
 }
 
-//
-const geometries = new Array(segmentCount).fill(new three.PlaneGeometry(1, 1)); // TODO: 使用InstanceGeometry
+const segmentGeometries = new Array(segmentCount).fill(new three.PlaneGeometry(1, 1)); // TODO: 使用InstanceGeometry
+const segmentBrightMaterial = new three.MeshBasicMaterial({ color: 0x1873e1, side: three.DoubleSide });
+const segmentDimMaterial = new three.MeshBasicMaterial({ color: 0x1956a9, side: three.DoubleSide });
+const segmentMeshs = segmentGeometries.map((g, i) => {
+    const m = new three.Mesh(g, i % 2 === 0 ? segmentBrightMaterial : segmentDimMaterial);
 
-//
-// TODO: 记笔记
-// const colors = new Uint8Array([0, 128]);
-// const gradientMap = new three.DataTexture(colors, colors.length, 1, three.RedFormat);
-// gradientMap.needsUpdate = true;
-// const material = new three.MeshToonMaterial({gradientMap})
+    if (segmentDirections[i] === 0) {
+        m.userData.currentScaleX = Math.random() * 5 + 1;
+    } else {
+        m.userData.currentScaleX = 0;
+        m.userData.nextScaleX = Math.random() * 5 + 1;
+    }
 
-const materialBright = new three.MeshBasicMaterial({ color: 0x1873e1, side: three.DoubleSide });
-const materialDim = new three.MeshBasicMaterial({ color: 0x1956a9, side: three.DoubleSide });
-
-//
-const meshs = geometries.map((geometry, index) => {
-    const material = index % 2 === 0 ? materialBright : materialDim;
-    const mesh = new three.Mesh(geometry, material);
-
-    return mesh;
+    return m;
 });
 
-meshs.forEach((mesh, index) => {
-    //
-    mesh.scale.setY(0.5).setX(Math.random() * 3 + 1);
-    mesh.rotateY((directions[index] * Math.PI) / 2);
-    mesh.updateMatrix();
+//
+const outlineGeometry = new LineGeometry();
+const outlineMaterial = new LineMaterial({ color: 0x000000, linewidth: 0.05, worldUnits: true });
 
-    //
-    if (index === 0) return;
+outlineMaterial.needsUpdate = true; // TODO: ?
 
-    const prevMesh = meshs[index - 1];
-    const prevVector3 = new three.Vector3(0.5, 0.5, 0).applyMatrix4(prevMesh.matrix);
-    const nextVector3 = new three.Vector3(-0.5, 0.5, 0).applyMatrix4(mesh.matrix);
-
-    mesh.position.add(prevVector3.clone().sub(nextVector3));
-    mesh.updateMatrix();
-});
-
-const plane = new three.Group().add(...meshs);
-scene.add(plane);
+const outline = new Line2(outlineGeometry, outlineMaterial);
 
 //
-const points = [];
+const segmentGroup = new three.Group().add(...segmentMeshs);
+const loading = new three.Group().add(segmentGroup, outline);
 
-points.push(new three.Vector3(-0.5, 0.5, 0).applyMatrix4(meshs[0].matrix));
-meshs.forEach(mesh => points.push(new three.Vector3(0.5, 0.5, 0).applyMatrix4(mesh.matrix)));
-[...meshs].reverse().forEach(mesh => points.push(new three.Vector3(0.5, -0.5, 0).applyMatrix4(mesh.matrix)));
-points.push(new three.Vector3(-0.5, -0.5, 0).applyMatrix4(meshs[0].matrix));
-points.push(points[0]);
-
-const linePositions = [];
-for (const point of points) linePositions.push(...point.toArray());
-
-const line = new three.Line(
-    new three.BufferGeometry().setFromPoints(points),
-    new three.MeshBasicMaterial({ color: 0xff0000 }),
-);
-
-const fatLineGeometry = new LineGeometry().setPositions(linePositions);
-const fatLineMaterial = new LineMaterial({
-    color: 0x000000,
-    linewidth: 0.02,
-    vertexColors: false,
-    dashed: false,
-    alphaToCoverage: false,
-});
-fatLineMaterial.worldUnits = true;
-fatLineMaterial.needsUpdate = true;
-
-const outline = new Line2(fatLineGeometry, fatLineMaterial);
-
-//
-const loading = new three.Group().add(plane, outline);
 scene.add(loading);
 
 //
-const box3 = new three.Box3().setFromPoints(points);
-loading.position.sub(box3.getCenter(new three.Vector3()));
+toggleLoading();
+loading.position.sub(outlineGeometry.boundingSphere.center);
+
+globalThis.f = toggleLoading;
+
+//
+function toggleLoading() {
+    segmentMeshs.forEach((m, i) => {
+        if (typeof m.userData.nextScaleX === 'number') {
+            const temp = m.userData.currentScaleX;
+
+            m.userData.currentScaleX = m.userData.nextScaleX;
+            m.userData.nextScaleX = temp;
+        }
+
+        m.scale.set(m.userData.currentScaleX, 1, 1);
+        m.rotation.set(0, (segmentDirections[i] * Math.PI) / 2, 0);
+        m.updateMatrix();
+
+        if (i === 0) return;
+
+        const prevM = segmentMeshs[i - 1];
+        const nextM = m;
+        const prevV = new three.Vector3(0.5, 0.5, 0).applyMatrix4(prevM.matrix);
+        const nextV = new three.Vector3(-0.5, 0.5, 0).applyMatrix4(nextM.matrix);
+
+        nextM.position.add(prevV.clone().sub(nextV));
+        nextM.updateMatrix();
+    });
+
+    const vs = [new three.Vector3(-0.5, 0.5, 0).applyMatrix4(segmentMeshs[0].matrix)];
+
+    for (let i = 0; i < segmentCount; i++) vs.push(new three.Vector3(0.5, 0.5, 0).applyMatrix4(segmentMeshs[i].matrix));
+    for (let i = segmentCount - 1; i >= 0; i--)
+        vs.push(new three.Vector3(0.5, -0.5, 0).applyMatrix4(segmentMeshs[i].matrix));
+
+    vs.push(new three.Vector3(-0.5, -0.5, 0).applyMatrix4(segmentMeshs[0].matrix));
+    vs.push(vs[0].clone());
+
+    const outlinePositions = [];
+
+    for (const v of vs) outlinePositions.push(...v.toArray());
+
+    outlineGeometry.setPositions(outlinePositions);
+    outlineGeometry.computeBoundingBox();
+    outlineGeometry.computeBoundingSphere();
+}
