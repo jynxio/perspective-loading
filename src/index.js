@@ -68,21 +68,28 @@ for (let i = 0; i < segmentCount; i++) {
     segmentDirections.push(Math.abs(sin) < Number.EPSILON ? 0 : sin);
 }
 
-const segmentGeometries = new Array(segmentCount).fill(new three.PlaneGeometry(1, 1)); // TODO: 使用InstanceGeometry
-const segmentBrightMaterial = new three.MeshBasicMaterial({ color: 0x1873e1, side: three.DoubleSide });
-const segmentDimMaterial = new three.MeshBasicMaterial({ color: 0x1956a9, side: three.DoubleSide });
-const segmentMeshs = segmentGeometries.map((g, i) => {
-    const m = new three.Mesh(g, i % 2 === 0 ? segmentBrightMaterial : segmentDimMaterial);
+const segmentGeometry = new three.PlaneGeometry(1, 1);
+const segmentBrightBlueMaterial = new three.MeshBasicMaterial({ color: 0x1873e1, side: three.DoubleSide });
+const segmentDimBlueMaterial = new three.MeshBasicMaterial({ color: 0x1956a9, side: three.DoubleSide });
+const segmentBrightWhiteMaterial = new three.MeshBasicMaterial({ color: 0xfffffff, side: three.DoubleSide });
+const segmentDimWhiteMaterial = new three.MeshBasicMaterial({ color: 0xc6c6c6, side: three.DoubleSide });
+const segmentBlueMeshs = [];
+const segmentWhiteMeshs = [];
+
+for (let i = 0; i < segmentCount; i++) {
+    const mb = new three.Mesh(segmentGeometry, i % 2 === 0 ? segmentBrightBlueMaterial : segmentDimBlueMaterial);
+    const mw = new three.Mesh(segmentGeometry, i % 2 === 0 ? segmentBrightWhiteMaterial : segmentDimWhiteMaterial);
 
     if (segmentDirections[i] === 0) {
-        m.userData.currentScaleX = Math.random() * 5 + 1;
+        mb.userData.currentScaleX = mw.userData.currentScaleX = Math.random() * 5 + 1;
     } else {
-        m.userData.currentScaleX = 0;
-        m.userData.nextScaleX = Math.random() * 5 + 1;
+        mb.userData.currentScaleX = mw.userData.currentScaleX = 0;
+        mb.userData.nextScaleX = mw.userData.nextScaleX = Math.random() * 5 + 1;
     }
 
-    return m;
-});
+    segmentBlueMeshs.push(mb);
+    segmentWhiteMeshs.push(mw);
+}
 
 //
 const outlineGeometry = new LineGeometry();
@@ -93,9 +100,13 @@ outlineMaterial.needsUpdate = true; // TODO: ?
 const outline = new Line2(outlineGeometry, outlineMaterial);
 
 //
-const segmentGroup = new three.Group().add(...segmentMeshs);
-const loading = new three.Group().add(segmentGroup, outline);
+const segmentBlueGroup = new three.Group().add(...segmentBlueMeshs);
+const segmentWhiteGroup = new three.Group().add(...segmentWhiteMeshs);
+const loading = new three.Group().add(segmentBlueGroup, segmentWhiteGroup, outline);
 
+segmentWhiteGroup.renderOrder = 0;
+segmentBlueGroup.renderOrder = 1;
+outline.renderOrder = 2;
 scene.add(loading);
 
 //
@@ -103,39 +114,44 @@ toggleLoading();
 loading.position.sub(outlineGeometry.boundingSphere.center);
 
 globalThis.f = toggleLoading;
+globalThis.j = scaleLoading;
 
 //
 function toggleLoading() {
-    segmentMeshs.forEach((m, i) => {
-        if (typeof m.userData.nextScaleX === 'number') {
-            const temp = m.userData.currentScaleX;
+    [segmentBlueMeshs, segmentWhiteMeshs].forEach(meshs => {
+        meshs.forEach((m, i) => {
+            if (typeof m.userData.nextScaleX === 'number') {
+                const temp = m.userData.currentScaleX;
 
-            m.userData.currentScaleX = m.userData.nextScaleX;
-            m.userData.nextScaleX = temp;
-        }
+                m.userData.currentScaleX = m.userData.nextScaleX;
+                m.userData.nextScaleX = temp;
+            }
 
-        m.scale.set(m.userData.currentScaleX, 1, 1);
-        m.rotation.set(0, (segmentDirections[i] * Math.PI) / 2, 0);
-        m.updateMatrix();
+            m.scale.set(m.userData.currentScaleX, 1, 1);
+            m.rotation.set(0, (segmentDirections[i] * Math.PI) / 2, 0);
+            m.updateMatrix();
 
-        if (i === 0) return;
+            if (i === 0) return;
 
-        const prevM = segmentMeshs[i - 1];
-        const nextM = m;
-        const prevV = new three.Vector3(0.5, 0.5, 0).applyMatrix4(prevM.matrix);
-        const nextV = new three.Vector3(-0.5, 0.5, 0).applyMatrix4(nextM.matrix);
+            const prevM = segmentBlueMeshs[i - 1];
+            const nextM = m;
+            const prevV = new three.Vector3(0.5, 0.5, 0).applyMatrix4(prevM.matrix);
+            const nextV = new three.Vector3(-0.5, 0.5, 0).applyMatrix4(nextM.matrix);
 
-        nextM.position.add(prevV.clone().sub(nextV));
-        nextM.updateMatrix();
+            nextM.position.add(prevV.clone().sub(nextV));
+            nextM.updateMatrix();
+        });
     });
 
-    const vs = [new three.Vector3(-0.5, 0.5, 0).applyMatrix4(segmentMeshs[0].matrix)];
+    // FIXME: 使用segmentWhiteMeshs
+    const vs = [new three.Vector3(-0.5, 0.5, 0).applyMatrix4(segmentBlueMeshs[0].matrix)];
 
-    for (let i = 0; i < segmentCount; i++) vs.push(new three.Vector3(0.5, 0.5, 0).applyMatrix4(segmentMeshs[i].matrix));
+    for (let i = 0; i < segmentCount; i++)
+        vs.push(new three.Vector3(0.5, 0.5, 0).applyMatrix4(segmentBlueMeshs[i].matrix));
     for (let i = segmentCount - 1; i >= 0; i--)
-        vs.push(new three.Vector3(0.5, -0.5, 0).applyMatrix4(segmentMeshs[i].matrix));
+        vs.push(new three.Vector3(0.5, -0.5, 0).applyMatrix4(segmentBlueMeshs[i].matrix));
 
-    vs.push(new three.Vector3(-0.5, -0.5, 0).applyMatrix4(segmentMeshs[0].matrix));
+    vs.push(new three.Vector3(-0.5, -0.5, 0).applyMatrix4(segmentBlueMeshs[0].matrix));
     vs.push(vs[0].clone());
 
     const outlinePositions = [];
@@ -145,4 +161,40 @@ function toggleLoading() {
     outlineGeometry.setPositions(outlinePositions);
     outlineGeometry.computeBoundingBox();
     outlineGeometry.computeBoundingSphere();
+}
+
+function scaleLoading(percentage) {
+    const segmentMeshLengths = segmentBlueMeshs.map(m => m.geometry.parameters.width * m.userData.currentScaleX);
+    const totalLength = segmentMeshLengths.reduce((prev, next) => prev + next, 0);
+
+    const currentLength = totalLength * percentage;
+
+    let reduceLength = 0;
+    let currentIndex;
+
+    for (let i = 0; i < segmentMeshLengths.length; i++) {
+        reduceLength += segmentMeshLengths[i];
+
+        if (reduceLength < currentLength) continue;
+
+        currentIndex = i;
+        break;
+    }
+
+    const scale =
+        (currentLength - (reduceLength - segmentMeshLengths[currentIndex])) / segmentMeshLengths[currentIndex];
+
+    for (let i = 0; i < currentIndex; i++) {
+        const m = segmentBlueMeshs[i];
+
+        m.scale.set(m.userData.currentScaleX, 1, 1);
+    }
+
+    segmentBlueMeshs[currentIndex].scale.set(segmentBlueMeshs[currentIndex].userData.currentScaleX * scale, 1, 1);
+
+    for (let i = currentIndex + 1; i < segmentBlueMeshs.length; i++) {
+        const m = segmentBlueMeshs[i];
+
+        m.scale.set(0, 1, 1);
+    }
 }
