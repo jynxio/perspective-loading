@@ -113,8 +113,22 @@ scene.add(loading);
 toggleLoading();
 loading.position.sub(outlineGeometry.boundingSphere.center);
 
-globalThis.f = toggleLoading;
-globalThis.j = scaleLoading;
+globalThis.f = toggleLoading; // TODO:
+globalThis.j = scaleLoading; // TODO:
+globalThis.a = () => {
+    let scale = 0;
+    const duration = 3000;
+    const start = performance.now();
+
+    requestAnimationFrame(function loop() {
+        scale = (performance.now() - start) / duration;
+        scaleLoading(Math.min(scale, 1));
+
+        if (scale >= 1) return;
+
+        requestAnimationFrame(loop);
+    });
+};
 
 //
 function toggleLoading() {
@@ -143,15 +157,14 @@ function toggleLoading() {
         });
     });
 
-    // FIXME: 使用segmentWhiteMeshs
-    const vs = [new three.Vector3(-0.5, 0.5, 0).applyMatrix4(segmentBlueMeshs[0].matrix)];
+    const vs = [new three.Vector3(-0.5, 0.5, 0).applyMatrix4(segmentWhiteMeshs[0].matrix)];
 
     for (let i = 0; i < segmentCount; i++)
-        vs.push(new three.Vector3(0.5, 0.5, 0).applyMatrix4(segmentBlueMeshs[i].matrix));
+        vs.push(new three.Vector3(0.5, 0.5, 0).applyMatrix4(segmentWhiteMeshs[i].matrix));
     for (let i = segmentCount - 1; i >= 0; i--)
-        vs.push(new three.Vector3(0.5, -0.5, 0).applyMatrix4(segmentBlueMeshs[i].matrix));
+        vs.push(new three.Vector3(0.5, -0.5, 0).applyMatrix4(segmentWhiteMeshs[i].matrix));
 
-    vs.push(new three.Vector3(-0.5, -0.5, 0).applyMatrix4(segmentBlueMeshs[0].matrix));
+    vs.push(new three.Vector3(-0.5, -0.5, 0).applyMatrix4(segmentWhiteMeshs[0].matrix));
     vs.push(vs[0].clone());
 
     const outlinePositions = [];
@@ -181,6 +194,15 @@ function scaleLoading(percentage) {
         break;
     }
 
+    // reset
+    segmentBlueMeshs.forEach(m => {
+        if (!m.userData.offsetX) return;
+
+        m.translateX(-m.userData.offsetX);
+        m.userData.offsetX = 0;
+    });
+
+    // translate
     const scale =
         (currentLength - (reduceLength - segmentMeshLengths[currentIndex])) / segmentMeshLengths[currentIndex];
 
@@ -191,6 +213,11 @@ function scaleLoading(percentage) {
     }
 
     segmentBlueMeshs[currentIndex].scale.set(segmentBlueMeshs[currentIndex].userData.currentScaleX * scale, 1, 1);
+    segmentBlueMeshs[currentIndex].translateX(
+        (-segmentBlueMeshs[currentIndex].userData.currentScaleX * (1 - scale)) / 2,
+    );
+    segmentBlueMeshs[currentIndex].userData.offsetX =
+        (-segmentBlueMeshs[currentIndex].userData.currentScaleX * (1 - scale)) / 2;
 
     for (let i = currentIndex + 1; i < segmentBlueMeshs.length; i++) {
         const m = segmentBlueMeshs[i];
