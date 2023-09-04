@@ -102,11 +102,11 @@ const outline = new Line2(outlineGeometry, outlineMaterial);
 //
 const segmentBlueGroup = new three.Group().add(...segmentBlueMeshs);
 const segmentWhiteGroup = new three.Group().add(...segmentWhiteMeshs);
-const loading = new three.Group().add(segmentBlueGroup, segmentWhiteGroup, outline);
+const loading = new three.Group().add(outline, segmentWhiteGroup, segmentBlueGroup);
 
-segmentWhiteGroup.renderOrder = 0;
-segmentBlueGroup.renderOrder = 1;
-outline.renderOrder = 2;
+outline.renderOrder = 0;
+segmentWhiteGroup.renderOrder = 1;
+segmentBlueGroup.renderOrder = 2;
 scene.add(loading);
 
 //
