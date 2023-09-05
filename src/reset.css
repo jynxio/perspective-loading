@@ -19,12 +19,9 @@ html:focus-within {
 
 body {
     line-height: 1.5;
-    text-rendering: optimizeSpeed;
-    /* Optional */
+    text-rendering: optimizespeed;
     -webkit-font-smoothing: antialiased;
-    /* Optional */
     -moz-osx-font-smoothing: grayscale;
-    /* Optional */
 }
 
 img,
