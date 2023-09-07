@@ -4,7 +4,7 @@ import Loading from './Loading';
 
 function Scene() {
     return (
-        <Canvas>
+        <Canvas camera={{ position: [0, 160, 160], fov: 45, near: 0.01, far: 1000 }}>
             <CameraControls />
             <color attach="background" args={[0xe2e0e2]} />
             <Loading />
