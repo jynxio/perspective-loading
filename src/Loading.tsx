@@ -5,7 +5,7 @@ function Loading() {
     const segmentCount = 13; // loading的段数
     const segmentDirections = []; // 每一段的方向: 0 -> 0°, 1 -> 90°, -1 -> -90°
 
-    const segmentGeometry = new three.Plane(1, 1);
+    const segmentGeometry = new three.PlaneGeometry(1, 1);
     const segmentIdleDimMaterial = new three.MeshBasicMaterial({ color: 0xc6c6c6, side: three.DoubleSide });
     const segmentIdleBrightMaterial = new three.MeshBasicMaterial({ color: 0xffffff, side: three.DoubleSide });
     const segmentloadedDimMaterial = new three.MeshBasicMaterial({ color: 0x1956a9, side: three.DoubleSide });
@@ -19,14 +19,13 @@ function Loading() {
     }
 
     return (
-        <Line
-            points={[
-                [1, 0, 0],
-                [-1, 0, 0],
-            ]}
-            color={0xff0000}
-            lineWidth={3}
-        />
+        <group>
+            {segmentDirections.map((d, i) => {
+                const material = i % 2 === 0 ? segmentIdleBrightMaterial : segmentIdleDimMaterial;
+
+                return <mesh></mesh>;
+            })}
+        </group>
     );
 }
 
