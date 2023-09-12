@@ -9,16 +9,16 @@
         "preview": "vite preview"
     },
     "devDependencies": {
-        "@types/node": "^20.5.9",
+        "@types/node": "^20.6.0",
         "@types/react": "^18.2.21",
         "@types/react-dom": "^18.2.7",
         "@types/stats.js": "^0.17.0",
         "@types/three": "^0.155.1",
-        "@typescript-eslint/eslint-plugin": "^6.6.0",
-        "@typescript-eslint/parser": "^6.6.0",
+        "@typescript-eslint/eslint-plugin": "^6.7.0",
+        "@typescript-eslint/parser": "^6.7.0",
         "@vitejs/plugin-react-swc": "^3.3.2",
         "autoprefixer": "^10.4.15",
-        "eslint": "^8.48.0",
+        "eslint": "^8.49.0",
         "eslint-config-prettier": "^8.10.0",
         "eslint-plugin-prettier": "^5.0.0",
         "postcss": "^8.4.29",
@@ -32,7 +32,7 @@
         "vite": "^4.4.9"
     },
     "dependencies": {
-        "@react-three/drei": "^9.82.0",
+        "@react-three/drei": "^9.83.9",
         "@react-three/fiber": "^8.14.1",
         "leva": "^0.9.35",
         "lil-gui": "^0.18.2",
