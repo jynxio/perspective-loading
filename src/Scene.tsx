@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber';
 import { CameraControls } from '@react-three/drei';
-import Loading from './Loading';
+// import Loading from '@/Loading';
+import Loading from '@/New';
 
 function Scene() {
     return (

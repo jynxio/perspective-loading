@@ -11,6 +11,7 @@ function Loading() {
     const [vector3s, setVector3s] = useState<three.Vector3[]>();
     const [position, setPosition] = useState<[number, number, number]>();
 
+    //
     const { loadedBoard, idleBoard } = useMemo(() => {
         //
         const segmentCount = 13; // loading的段数
@@ -22,6 +23,8 @@ function Loading() {
 
             segmentDirections.push(Math.abs(sin) < Number.EPSILON ? 0 : sin);
         }
+
+        console.log(segmentDirections);
 
         //
         const segmentGeometry = new three.PlaneGeometry(1, 1);
@@ -66,6 +69,7 @@ function Loading() {
         return { loadedBoard, idleBoard };
     }, []);
 
+    //
     useEffect(() => {
         //
         if (isTilt) {
@@ -94,7 +98,7 @@ function Loading() {
         const position = new three.Vector3().sub(sphere.center).toArray();
 
         setPosition(position);
-    }, [isTilt, percentage, idleBoard, loadedBoard]);
+    }, [isTilt, idleBoard, loadedBoard]);
 
     useEffect(() => setPercentage(percentage, idleBoard, loadedBoard), [percentage, idleBoard, loadedBoard]);
 
