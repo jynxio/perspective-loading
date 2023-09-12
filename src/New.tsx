@@ -66,17 +66,87 @@ function Loading() {
     }, [path]);
 
     const [idlePositionAttribute, idleIndexAttribute, idleColorAttribute] = useMemo(() => {
-        return;
+        // Find the target index
+        const lengths = [];
+
+        for (let i = 2; i < path.length; i += 2) {
+            const [prevX, prevZ] = [path[i - 2], path[i - 1]];
+            const [nextX, nextZ] = [path[i], path[i + 1]];
+
+            lengths.push(Math.hypot(nextX - prevX, nextZ - prevZ));
+        }
+
+        const totalLength = lengths.reduce((prev, next) => prev + next, 0);
+        const percentLength = (totalLength * percentage) / 100;
+
+        let lengthIndex = 0;
+        let cumulativeLength = 0;
+
+        while (true) {
+            cumulativeLength += lengths[lengthIndex];
+
+            if (cumulativeLength > percentLength) break;
+
+            lengthIndex++;
+        }
+
+        // Calculate scale
+        const scale = 1 - (cumulativeLength - percentLength) / lengths[lengthIndex];
+
+        // Create position
+        const height = 1;
+        const positions = [];
+
+        for (let i = 0; i < lengthIndex; i++) {
+            const j = i + 1;
+            const [x1, z1] = [path[i * 2 + 0], path[i * 2 + 1]];
+            const [x2, z2] = [path[j * 2 + 0], path[j * 2 + 1]];
+
+            positions.push(x1, +height / 2, z1); // anticlockwise
+            positions.push(x1, -height / 2, z1);
+            positions.push(x2, -height / 2, z2);
+            positions.push(x2, +height / 2, z2);
+        }
+
+        {
+            const i = lengthIndex;
+            const j = i + 1;
+            const [x1, z1] = [path[i * 2 + 0], path[i * 2 + 1]];
+            const [x2, z2] = [path[j * 2 + 0], path[j * 2 + 1]];
+            const [x3, z3] = [(x1 + x2) * scale, (z1 + z2) * scale];
+
+            positions.push(x1, +height / 2, z1); // anticlockwise
+            positions.push(x1, -height / 2, z1);
+            positions.push(x3, -height / 2, z3);
+            positions.push(x3, +height / 2, z3);
+        }
+
+        const positionAttribute = new Float32Array(positions);
+
+        // Create indexes
+
+        return [positionAttribute];
     }, [path, isTilt, percentage]);
 
     const [loadedPositionAttribute, loadedIndexAttribute, loadedColorAttribute] = useMemo(() => {
-        return;
+        return [];
     }, [path, isTilt, percentage]);
 
     return (
         <group>
             <primitive object={idle} />
             <primitive object={loaded} />
+            <mesh>
+                <bufferGeometry>
+                    <bufferAttribute
+                        attach="attributes-position"
+                        count={idlePositionAttribute.length / 3}
+                        array={idlePositionAttribute}
+                        itemSize={3}
+                    />
+                </bufferGeometry>
+                <meshBasicMaterial color={0xff0000} side={three.DoubleSide} />
+            </mesh>
             <Line points={linePositions} color={0x000000} linewidth={2} />
         </group>
     );
