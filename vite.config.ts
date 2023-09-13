@@ -19,7 +19,7 @@ export default defineConfig({
         cors: true,
     },
     build: {
-        outDir: 'dist',
+        outDir: 'docs',
         target: 'esnext',
         assetsInlineLimit: 4096,
         chunkSizeWarningLimit: 1000,
