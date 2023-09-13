@@ -10,6 +10,7 @@ export default defineConfig({
             '$': path.resolve(__dirname, './'),
         },
     },
+    base: './',
     server: {
         host: true,
         port: 3985,
