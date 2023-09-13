@@ -1,224 +1,307 @@
 import * as three from 'three';
 import { useEffect, useMemo, useState } from 'react';
-import { useControls } from 'leva';
-import { Line } from '@react-three/drei';
+import { useControls, button } from 'leva';
+import { Line, Text } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
 
 function Loading() {
-    //
-    const { isTilt, percentage } = useControls({ isTilt: true, percentage: { value: 78, min: 0, max: 100, step: 1 } });
+    const [isTilt, setIsTilt] = useState(false);
+    const [isRunning, setIsRunning] = useState(false);
+    const [percentage, setPercentage] = useState(0);
 
-    //
-    const [vector3s, setVector3s] = useState<three.Vector3[]>();
-    const [position, setPosition] = useState<[number, number, number]>();
+    useControls({
+        Toggle: button(() => setIsTilt(prev => !prev)),
+        Play: button(() => isRunning || setIsRunning(true)),
+    });
 
-    //
-    const { loadedBoard, idleBoard } = useMemo(() => {
-        //
-        const segmentCount = 13; // loading的段数
-        const segmentDirections: number[] = []; // 每一段的方向: 0 -> 0°, 1 -> 90°, -1 -> -90°
+    useFrame((...args) => {
+        const [, delta] = args;
 
-        for (let i = 0; i < segmentCount; i++) {
+        if (!isRunning) return;
+        if (percentage === 100) {
+            setIsRunning(false);
+            setTimeout(() => setPercentage(0), 1500);
+
+            return;
+        }
+
+        const duration = 8; // unit: second
+
+        setPercentage(prev => Math.min(prev + (delta / duration) * 100, 100));
+    });
+
+    const directions = useMemo(() => {
+        const count = 13; // 段数（首段和末段必须是水平段）
+        const directions: number[] = []; // 每段方向: 0 -> 0°, 1 -> 90°, -1 -> -90°
+
+        for (let i = 0; i < count; i++) {
             const rad = ((i * Math.PI) / 2) % (Math.PI * 2);
             const sin = Math.sin(rad);
 
-            segmentDirections.push(Math.abs(sin) < Number.EPSILON ? 0 : sin);
+            directions.push(Math.abs(sin) < Number.EPSILON ? 0 : sin);
         }
 
-        console.log(segmentDirections);
-
-        //
-        const segmentGeometry = new three.PlaneGeometry(1, 1);
-        const segmentIdleDimMaterial = new three.MeshBasicMaterial({ color: 0xc6c6c6, side: three.DoubleSide });
-        const segmentIdleBrightMaterial = new three.MeshBasicMaterial({ color: 0xffffff, side: three.DoubleSide });
-        const segmentloadedDimMaterial = new three.MeshBasicMaterial({ color: 0x1956a9, side: three.DoubleSide });
-        const segmentLoadedBrightMaterial = new three.MeshBasicMaterial({ color: 0x1873e1, side: three.DoubleSide });
-
-        const segmentLoadedMeshs = [];
-        const segmentIdleMeshs = [];
-
-        for (let i = 0; i < segmentCount; i++) {
-            const idleMaterial = i % 2 === 0 ? segmentIdleBrightMaterial : segmentIdleDimMaterial;
-            const loadedMaterial = i % 2 === 0 ? segmentLoadedBrightMaterial : segmentloadedDimMaterial;
-
-            const idleMesh = new three.Mesh(segmentGeometry, idleMaterial);
-            const loadedMesh = new three.Mesh(segmentGeometry, loadedMaterial);
-
-            idleMesh.rotation.set(0, (segmentDirections[i] * Math.PI) / 2, 0);
-            loadedMesh.rotation.set(0, (segmentDirections[i] * Math.PI) / 2, 0);
-
-            if (segmentDirections[i] === 0) {
-                const random = Math.random() * 5 + 1;
-
-                idleMesh.userData = { tiltViewScaleX: random, frontViewScaleX: random };
-                loadedMesh.userData = { tiltViewScaleX: random, frontViewScaleX: random };
-            } else {
-                const random = Math.random() * 5 + 1;
-
-                idleMesh.userData = { tiltViewScaleX: random, frontViewScaleX: 0 };
-                loadedMesh.userData = { tiltViewScaleX: random, frontViewScaleX: 0 };
-            }
-
-            segmentLoadedMeshs.push(loadedMesh);
-            segmentIdleMeshs.push(idleMesh);
-        }
-
-        //
-        const idleBoard = new three.Group().add(...segmentIdleMeshs);
-        const loadedBoard = new three.Group().add(...segmentLoadedMeshs);
-
-        return { loadedBoard, idleBoard };
+        return directions;
     }, []);
 
-    //
-    useEffect(() => {
-        //
-        if (isTilt) {
-            turnToTiltView(idleBoard);
-            turnToTiltView(loadedBoard);
-        } else {
-            turnToFrontView(idleBoard);
-            turnToFrontView(loadedBoard);
+    const [idle, loaded] = useMemo(() => {
+        const idleGeometry = new three.BufferGeometry();
+        const loadedGeometry = new three.BufferGeometry();
+
+        const material = new three.MeshBasicMaterial({ side: three.DoubleSide, vertexColors: true });
+
+        const idle = new three.Mesh(idleGeometry, material);
+        const loaded = new three.Mesh(loadedGeometry, material);
+
+        return [idle, loaded];
+    }, []);
+
+    const path = useMemo(() => {
+        const path = [0, 0]; // 2d路径
+
+        for (let i = 0, cumulative = 0; i < directions.length; i++) {
+            const direction = directions[i];
+            const length = direction === 0 ? Math.random() * 2 + 2 : Math.random() * 8 + 2;
+            const [prevX, prevZ] = path.slice(-2);
+
+            if (i === directions.length - 2) {
+                path.push(prevX, prevZ - cumulative);
+            } else if (direction === 0) {
+                path.push(prevX + length, prevZ);
+            } else if (direction === 1) {
+                path.push(prevX, prevZ - length);
+                cumulative -= length;
+            } else if (direction === -1) {
+                path.push(prevX, prevZ + length);
+                cumulative += length;
+            }
         }
 
-        // Create vector3s
-        const vector3s = [new three.Vector3(-0.5, 0.5, 0).applyMatrix4(idleBoard.children[0].matrix)];
+        return path;
+    }, [directions]);
 
-        for (let i = 0; i < loadedBoard.children.length; i++)
-            vector3s.push(new three.Vector3(0.5, 0.5, 0).applyMatrix4(loadedBoard.children[i].matrix));
-        for (let i = idleBoard.children.length - 1; i >= 0; i--)
-            vector3s.push(new three.Vector3(0.5, -0.5, 0).applyMatrix4(idleBoard.children[i].matrix));
+    const linePositions = useMemo(() => {
+        const height = 1;
+        const linePositions = [];
 
-        vector3s.push(new three.Vector3(-0.5, -0.5, 0).applyMatrix4(loadedBoard.children[0].matrix));
-        vector3s.push(vector3s[0].clone());
+        if (isTilt) {
+            for (let i = 0; i < path.length; i += 2) linePositions.push(path[i], height / 2, path[i + 1]);
+            for (let i = path.length - 1; i >= 0; i -= 2) linePositions.push(path[i - 1], -height / 2, path[i]);
 
-        setVector3s(vector3s);
+            linePositions.push(path[0], height / 2, path[1]);
 
-        // Create position
-        const sphere = new three.Sphere().setFromPoints(vector3s);
-        const position = new three.Vector3().sub(sphere.center).toArray();
+            return linePositions;
+        }
 
-        setPosition(position);
-    }, [isTilt, idleBoard, loadedBoard]);
+        linePositions.push(path[0], height / 2, path[1]);
+        linePositions.push(path.at(-2)!, height / 2, path.at(-1)!);
+        linePositions.push(path.at(-2)!, -height / 2, path.at(-1)!);
+        linePositions.push(path[0], -height / 2, path[1]);
+        linePositions.push(path[0], height / 2, path[1]);
 
-    useEffect(() => setPercentage(percentage, idleBoard, loadedBoard), [percentage, idleBoard, loadedBoard]);
+        return linePositions;
+    }, [isTilt, path]);
 
-    if (!vector3s) return <></>;
+    const {
+        idlePositionAttribute,
+        idleIndexAttribute,
+        idleColorAttribute,
+        loadedPositionAttribute,
+        loadedIndexAttribute,
+        loadedColorAttribute,
+    } = useMemo(() => {
+        // Find the target index
+        const lengths = [];
 
-    //
+        for (let i = 0; i < path.length - 2; i += 2) {
+            const [prevX, prevZ] = [path[i], path[i + 1]];
+            const [nextX, nextZ] = [path[i + 2], path[i + 3]];
+
+            lengths.push(Math.hypot(nextX - prevX, nextZ - prevZ));
+        }
+
+        const totalLength = lengths.reduce((prev, next) => prev + next, 0);
+        const percentLength = totalLength * (percentage / 100);
+
+        let lengthIndex = 0;
+        let cumulativeLength = 0;
+
+        while (true) {
+            cumulativeLength += lengths[lengthIndex];
+
+            if (cumulativeLength >= percentLength) break;
+
+            lengthIndex++;
+        }
+
+        // Calculate scale
+        const idleScale = (cumulativeLength - percentLength) / lengths[lengthIndex];
+        const loadedScale = 1 - idleScale;
+
+        // Create position attribute
+        const height = 1;
+
+        const idlePositions = [];
+
+        {
+            const i = lengthIndex;
+            const j = i + 1;
+            const [x1, z1] = [path[i * 2 + 0], path[i * 2 + 1]];
+            const [x2, z2] = [path[j * 2 + 0], path[j * 2 + 1]];
+            const [x3, z3] = [(x1 - x2) * idleScale + x2, (z1 - z2) * idleScale + z2];
+
+            idlePositions.push(x3, +height / 2, isTilt ? z3 : 0); // anticlockwise
+            idlePositions.push(x3, -height / 2, isTilt ? z3 : 0);
+            idlePositions.push(x2, -height / 2, isTilt ? z2 : 0);
+            idlePositions.push(x2, +height / 2, isTilt ? z2 : 0);
+        }
+
+        for (let i = lengthIndex + 1; i < lengths.length; i++) {
+            const j = i + 1;
+            const [x1, z1] = [path[i * 2 + 0], path[i * 2 + 1]];
+            const [x2, z2] = [path[j * 2 + 0], path[j * 2 + 1]];
+
+            idlePositions.push(x1, +height / 2, isTilt ? z1 : 0); // anticlockwise
+            idlePositions.push(x1, -height / 2, isTilt ? z1 : 0);
+            idlePositions.push(x2, -height / 2, isTilt ? z2 : 0);
+            idlePositions.push(x2, +height / 2, isTilt ? z2 : 0);
+        }
+
+        const idlePositionAttribute = new Float32Array(idlePositions);
+
+        const loadedPositions = [];
+
+        for (let i = 0; i < lengthIndex; i++) {
+            const j = i + 1;
+            const [x1, z1] = [path[i * 2 + 0], path[i * 2 + 1]];
+            const [x2, z2] = [path[j * 2 + 0], path[j * 2 + 1]];
+
+            loadedPositions.push(x1, +height / 2, isTilt ? z1 : 0); // anticlockwise
+            loadedPositions.push(x1, -height / 2, isTilt ? z1 : 0);
+            loadedPositions.push(x2, -height / 2, isTilt ? z2 : 0);
+            loadedPositions.push(x2, +height / 2, isTilt ? z2 : 0);
+        }
+
+        {
+            const i = lengthIndex;
+            const j = i + 1;
+            const [x1, z1] = [path[i * 2 + 0], path[i * 2 + 1]];
+            const [x2, z2] = [path[j * 2 + 0], path[j * 2 + 1]];
+            const [x3, z3] = [(x2 - x1) * loadedScale + x1, (z2 - z1) * loadedScale + z1];
+
+            loadedPositions.push(x1, +height / 2, isTilt ? z1 : 0); // anticlockwise
+            loadedPositions.push(x1, -height / 2, isTilt ? z1 : 0);
+            loadedPositions.push(x3, -height / 2, isTilt ? z3 : 0);
+            loadedPositions.push(x3, +height / 2, isTilt ? z3 : 0);
+        }
+
+        const loadedPositionAttribute = new Float32Array(loadedPositions);
+
+        // Create index attribute
+        const idleIndexes = [];
+
+        for (let i = 0; i < idlePositions.length / 3; i += 4) {
+            const [a, b, c, d] = [i + 0, i + 1, i + 2, i + 3];
+
+            idleIndexes.push(a, b, d);
+            idleIndexes.push(d, b, c);
+        }
+
+        const idleIndexAttribute = new Uint16Array(idleIndexes);
+
+        const loadedIndexes = [];
+
+        for (let i = 0; i < loadedPositions.length / 3; i += 4) {
+            const [a, b, c, d] = [i + 0, i + 1, i + 2, i + 3];
+
+            loadedIndexes.push(a, b, d);
+            loadedIndexes.push(d, b, c);
+        }
+
+        const loadedIndexAttribute = new Uint16Array(loadedIndexes);
+
+        // Create color attribute
+        const idleDimColor = new three.Color(0xc6c6c6);
+        const idleBrightColor = new three.Color(0xffffff);
+
+        const idleColors = [];
+
+        for (let i = 0; i < idlePositions.length / 3 / 4; i++) {
+            const color = i % 2 === 0 ? idleBrightColor : idleDimColor;
+            const array = color.toArray();
+
+            idleColors.push(...array, ...array, ...array, ...array);
+        }
+
+        const idleColorAttribute = new Float32Array(idleColors.reverse());
+
+        const loadedDimColor = new three.Color(0x1956a9);
+        const loadedBrightColor = new three.Color(0x1873e1);
+
+        const loadedColors = [];
+
+        for (let i = 0; i < loadedPositions.length / 3 / 4; i++) {
+            const color = i % 2 === 0 ? loadedBrightColor : loadedDimColor;
+            const array = color.toArray();
+
+            loadedColors.push(...array, ...array, ...array, ...array);
+        }
+
+        const loadedColorAttribute = new Float32Array(loadedColors);
+
+        //
+        return {
+            idlePositionAttribute,
+            idleIndexAttribute,
+            idleColorAttribute,
+            loadedPositionAttribute,
+            loadedIndexAttribute,
+            loadedColorAttribute,
+        };
+    }, [path, isTilt, percentage]);
+
+    const position = useMemo(() => {
+        const vector3s = [];
+
+        for (let i = 0; i < path.length; i += 2) vector3s.push(new three.Vector3(path[i], 0, path[i + 1]));
+
+        const box3 = new three.Box3().setFromPoints(vector3s);
+        const center = box3.getCenter(new three.Vector3());
+
+        return new three.Vector3().sub(center);
+    }, [path]);
+
+    useEffect(() => {
+        idle.geometry.setIndex(new three.BufferAttribute(idleIndexAttribute, 1));
+        idle.geometry.setAttribute('position', new three.BufferAttribute(idlePositionAttribute, 3));
+        idle.geometry.setAttribute('color', new three.BufferAttribute(idleColorAttribute, 3));
+        idle.geometry.computeBoundingSphere();
+        idle.geometry.computeBoundingBox();
+
+        loaded.geometry.setIndex(new three.BufferAttribute(loadedIndexAttribute, 1));
+        loaded.geometry.setAttribute('position', new three.BufferAttribute(loadedPositionAttribute, 3));
+        loaded.geometry.setAttribute('color', new three.BufferAttribute(loadedColorAttribute, 3));
+        loaded.geometry.computeBoundingSphere();
+        loaded.geometry.computeBoundingBox();
+    }, [
+        idlePositionAttribute,
+        idleIndexAttribute,
+        idleColorAttribute,
+        loadedPositionAttribute,
+        loadedIndexAttribute,
+        loadedColorAttribute,
+    ]);
+
     return (
         <group position={position}>
-            <primitive object={idleBoard} />
-            <primitive object={loadedBoard} />
-            <Line points={vector3s} color={0x000000} linewidth={2} />
+            <primitive object={idle} />
+            <primitive object={loaded} />
+            <Line points={linePositions} color={0x000000} linewidth={2} />
+            <Text position={new three.Vector3(0, 0.8, 0)} color="black" fontSize={0.5} anchorX="left" anchorY="middle">
+                Progress: {percentage.toFixed() + '%'}
+            </Text>
         </group>
     );
-}
-
-function turnToTiltView(group: three.Group) {
-    const meshs = group.children;
-
-    meshs.forEach((m, i) => {
-        m.scale.set(m.userData.tiltViewScaleX, 1, 1);
-        m.updateMatrix();
-
-        if (i === 0) return;
-
-        const prevM = meshs[i - 1];
-        const nextM = m;
-        const prevV = new three.Vector3(0.5, 0.5, 0).applyMatrix4(prevM.matrix);
-        const nextV = new three.Vector3(-0.5, 0.5, 0).applyMatrix4(nextM.matrix);
-
-        nextM.position.add(prevV.clone().sub(nextV));
-        nextM.updateMatrix();
-    });
-}
-
-function turnToFrontView(group: three.Group) {
-    const meshs = group.children;
-
-    meshs.forEach((m, i) => {
-        m.scale.set(m.userData.frontViewScaleX, 1, 1);
-        m.updateMatrix();
-
-        if (i === 0) return;
-
-        const prevM = meshs[i - 1];
-        const nextM = m;
-        const prevV = new three.Vector3(0.5, 0.5, 0).applyMatrix4(prevM.matrix);
-        const nextV = new three.Vector3(-0.5, 0.5, 0).applyMatrix4(nextM.matrix);
-
-        nextM.position.add(prevV.clone().sub(nextV));
-        nextM.updateMatrix();
-    });
-}
-
-function setPercentage(percentage: number, idleGroup: three.Group, loadedGroup: three.Group) {
-    //
-    const idleMeshs = idleGroup.children as three.Mesh[];
-    const loadedMeshs = loadedGroup.children as three.Mesh[];
-
-    const segmentLengths = idleMeshs.map(mesh => {
-        const geometry = mesh.geometry as three.PlaneGeometry;
-        const width = geometry.parameters.width;
-        const scale = mesh.userData.tiltViewScaleX as number;
-
-        return width * scale;
-    });
-    const totalLength = segmentLengths.reduce((prev, next) => prev + next, 0);
-    const loadedLength = (totalLength * percentage) / 100;
-
-    //
-    let cumulativeLength = 0;
-    let targetIndex = -1;
-
-    for (let i = 0; i < segmentLengths.length; i++) {
-        cumulativeLength += segmentLengths[i];
-
-        if (cumulativeLength < loadedLength) continue;
-
-        targetIndex = i;
-        break;
-    }
-
-    if (targetIndex === -1) throw new Error('Can not find "targetIndex"');
-
-    // reset
-    for (let i = 0; i < segmentLengths.length; i++) {
-        const idleMesh = idleMeshs[i];
-        const loadedMesh = loadedMeshs[i];
-
-        idleMesh.userData.offsetX && idleMesh.translateX(-idleMesh.userData.offsetX);
-        loadedMesh.userData.offsetX && loadedMesh.translateX(-loadedMesh.userData.offsetX);
-
-        delete idleMesh.userData.offsetX;
-        delete loadedMesh.userData.offsetX;
-    }
-
-    // transform
-    const idleScale = (cumulativeLength - loadedLength) / segmentLengths[targetIndex];
-    const loadedScale = 1 - idleScale;
-
-    for (let i = 0; i < targetIndex; i++) {
-        idleMeshs[i].scale.set(0, 1, 1);
-        loadedMeshs[i].scale.set(loadedMeshs[i].userData.tiltViewScaleX, 1, 1);
-    }
-
-    for (let i = targetIndex + 1; i < segmentLengths.length; i++) {
-        idleMeshs[i].scale.set(idleMeshs[i].userData.tiltViewScaleX, 1, 1);
-        loadedMeshs[i].scale.set(0, 1, 1);
-    }
-
-    idleMeshs[targetIndex].scale.set(idleMeshs[targetIndex].userData.tiltViewScaleX * idleScale, 1, 1);
-    loadedMeshs[targetIndex].scale.set(loadedMeshs[targetIndex].userData.tiltViewScaleX * loadedScale, 1, 1);
-
-    const idleOffsetX = ((1 - idleScale) * idleMeshs[targetIndex].userData.tiltViewScaleX) / 2;
-    const loadedOffsetX = (-(1 - loadedScale) * loadedMeshs[targetIndex].userData.tiltViewScaleX) / 2;
-
-    idleMeshs[targetIndex].translateX(idleOffsetX);
-    loadedMeshs[targetIndex].translateX(loadedOffsetX);
-
-    idleMeshs[targetIndex].userData.offsetX = idleOffsetX;
-    loadedMeshs[targetIndex].userData.offsetX = loadedOffsetX;
 }
 
 export default Loading;
