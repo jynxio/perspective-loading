@@ -3,10 +3,9 @@
 **/node_modules
 
 # Production
-dist
-build
+**/dist*/
+**/build*/
 
-# Asset
-post
+# Markdown
 **/*.md
 **/*.mdx
