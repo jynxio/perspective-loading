@@ -6,8 +6,8 @@ settings:
 
 dependencies:
   '@react-three/drei':
-    specifier: ^9.96.1
-    version: 9.96.1(@react-three/fiber@8.15.14)(@types/react@18.2.48)(@types/three@0.160.0)(react-dom@18.2.0)(react@18.2.0)(three@0.160.0)
+    specifier: ^9.96.5
+    version: 9.96.5(@react-three/fiber@8.15.14)(@types/react@18.2.48)(@types/three@0.160.0)(react-dom@18.2.0)(react@18.2.0)(three@0.160.0)
   '@react-three/fiber':
     specifier: ^8.15.14
     version: 8.15.14(react-dom@18.2.0)(react@18.2.0)(three@0.160.0)
@@ -1485,8 +1485,8 @@ packages:
     resolution: {integrity: sha512-POu8Mk0hIU3lRXB3bGIGe4VHIwwDsQyoD1F394OK7STTiX9w4dG3cTLljjYswkQN+hDSHRrj4O36kuVa7KPU8Q==}
     dev: false
 
-  /@react-three/drei@9.96.1(@react-three/fiber@8.15.14)(@types/react@18.2.48)(@types/three@0.160.0)(react-dom@18.2.0)(react@18.2.0)(three@0.160.0):
-    resolution: {integrity: sha512-aPdDCIZkqorTyGYCQNqYwlPVWAvIHHbYus9HMfR8fHdeGpSlp4sRVtIDWp9g8zKl16LRMGPYXAPC7azAS1Pyqw==}
+  /@react-three/drei@9.96.5(@react-three/fiber@8.15.14)(@types/react@18.2.48)(@types/three@0.160.0)(react-dom@18.2.0)(react@18.2.0)(three@0.160.0):
+    resolution: {integrity: sha512-mEf8y8S0FCdCryfbKJ1vghYzMgI+7bgssEeerBBwCk4pi7h8OeavWISXb7QzY9dQLbPm5lL/X0PC7qLE6VUKww==}
     peerDependencies:
       '@react-three/fiber': '>=8.0'
       react: '>=18.0'
@@ -1505,9 +1505,6 @@ packages:
       cross-env: 7.0.3
       detect-gpu: 5.0.37
       glsl-noise: 0.0.0
-      lodash.clamp: 4.0.3
-      lodash.omit: 4.5.0
-      lodash.pick: 4.4.0
       maath: 0.10.7(@types/three@0.160.0)(three@0.160.0)
       meshline: 3.1.7(three@0.160.0)
       react: 18.2.0
@@ -3494,21 +3491,9 @@ packages:
       p-locate: 5.0.0
     dev: true
 
-  /lodash.clamp@4.0.3:
-    resolution: {integrity: sha512-HvzRFWjtcguTW7yd8NJBshuNaCa8aqNFtnswdT7f/cMd/1YKy5Zzoq4W/Oxvnx9l7aeY258uSdDfM793+eLsVg==}
-    dev: false
-
   /lodash.merge@4.6.2:
     resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}
     dev: true
-
-  /lodash.omit@4.5.0:
-    resolution: {integrity: sha512-XeqSp49hNGmlkj2EJlfrQFIzQ6lXdNro9sddtQzcJY8QaoC2GO0DT7xaIokHeyM+mIT0mPMlPvkYzg2xCuHdZg==}
-    dev: false
-
-  /lodash.pick@4.4.0:
-    resolution: {integrity: sha512-hXt6Ul/5yWjfklSGvLQl8vM//l3FtyHZeuelpzK6mm99pNvN9yTDruNZPEJZD1oWrqo+izBmB7oUfWgcCX7s4Q==}
-    dev: false
 
   /lodash.truncate@4.4.2:
     resolution: {integrity: sha512-jttmRe7bRse52OsWIMDLaXxWqRAmtIUccAQ3garviCqJjafXOfNMO0yMfNpdD6zbGaTU0P5Nz7e7gAT6cKmJRw==}
