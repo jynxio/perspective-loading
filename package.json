@@ -13,7 +13,7 @@
 		"lint:css": "stylelint \"**/*.{css,scss,sass,less,postcss}\" --fix"
 	},
 	"dependencies": {
-		"@react-three/drei": "^9.97.5",
+		"@react-three/drei": "^9.99.4",
 		"@react-three/fiber": "^8.15.16",
 		"leva": "^0.9.35",
 		"react": "^18.2.0",
